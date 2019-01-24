@@ -1,0 +1,220 @@
+<!doctype html>
+  <head>
+  <meta charset="utf-8" />
+<html>
+	
+	
+	<!-- importing jquery and plugins -->
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"> </script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+	
+	<script>
+	
+	//array to store string for autocomplete function
+	var searches = [ "KFC", "2 Red Cakes", "A Taste Of India", "A2 Takeaway"];
+	
+	//variables for further use
+	var mostRecent;
+	var trHTML;
+	//get all results on the first page 
+	$.get( "https://www.cs.kent.ac.uk/people/staff/sm951/co539/assessment2/hygiene.php?operation=get&page=1", function( data ) {
+		
+		//for each object returned ...
+		$.each(data, function (key,value) {
+			//create a row in a table with the name, address and hygiene rating of the object.                                       Also add a class to the button
+			trHTML = '<tr><td>' + value.name + '</td><td>' + value.addressLine + '</td><td>' + value.hygieneRating + '</td><td><button class="rating" id ="' + value.name + '">  Get Rating</button>' + '</td></tr>' ;
+			//add the row to an existing table
+			$('#places').append(trHTML); 
+	  
+		});    
+		
+	}, "json" );	
+
+
+	//return the number of pages
+	$(function(){
+	$.get("https://www.cs.kent.ac.uk/people/staff/sm951/co539/assessment2/hygiene.php?operation=pages", function (data){
+		
+		//store it in a variable
+		var pages = data.pages;
+		
+		var i;
+		//create a button for each page and append it to a div on the page 
+		for (i = 1; i <= pages; i++) { 
+		 
+			//also sets a class for the button and some styling
+		 $("#pages").append('<button class="page" style="border: 1px black solid;background-color: Lightgray;">' + i + '</button>');
+		}
+		
+		
+	}, "json");
+	});
+		
+		
+	//when a button is clicked
+	
+	$(function(){
+	$("#pages").on("click", ".page" , function(){
+			if (mostRecent != null){
+			$(mostRecent).css('border', '1px black solid');
+			$(mostRecent).css('background-color', 'Lightgray');
+			}
+			mostRecent = this;
+			$(this).css('border', 'solid 2px black');
+			$(this).css('background-color', 'gray');
+			
+			//get the number of the button
+            var number = $(this).text();
+			//clear the table, keeping the headers
+			$('#places tbody').remove();
+			
+			//get all the results on that page number
+			$.get( "https://www.cs.kent.ac.uk/people/staff/sm951/co539/assessment2/hygiene.php?operation=get&page=" + number, function( data ) {
+				
+				//add all data into the table
+				$.each(data, function (key,value) {
+					trHTML = '<tr><td>' + value.name + '</td><td>' + value.addressLine + '</td><td>' + value.hygieneRating + '</td><td><button class="rating" id ="' + value.name + '">  Get Rating</button>' + '</td></tr>' ;
+					$('#places').append(trHTML);
+				});
+				
+			}, "json" );
+	});
+	});
+	
+	
+	//when the rating button on the table is clicked
+	$(function(){
+	$("#test").on("click", ".rating" , function(){
+			
+			//get the id attribute of the button, which is the name of the business on that table row
+            var name = $(this).attr('id');
+			
+			
+			//return all results with that name from the customer rating script
+			$.get( "https://www.cs.kent.ac.uk/people/staff/sm951/co539/assessment2/rating.php?name=" + name, function( data ) {
+				
+				//if the script returns nothing then tell the user there is no rating for that business
+				if (data.length == 0 || data[0].rating == null){
+				//done in an alert
+				window.alert("There is no rating data for this resteraunt");
+				}else{
+					
+				//however if there is a rating, display it
+				window.alert("The rating for " + name + " is: " + data[0].rating);
+				}
+			}, "json" );
+	});
+	});
+	
+	//when the submit button on the form is pressed
+	$(function(){
+	$("body").on("click", "#submit" , function(){		
+			
+			//store the current input of the text box into a variable
+			var searchString = $("#search").val();
+		
+			//clear the table
+			$('#places tbody').remove();
+			//using the search operation on the script, return all results with the searchstring that the user inputted earlier
+			$.get( "https://www.cs.kent.ac.uk/people/staff/sm951/co539/assessment2/hygiene.php?operation=search&name=" + searchString, function( data ) {
+				
+				//create table row for each object and append it onto the table
+				$.each(data, function (key,value) {
+					trHTML = '<tr><td>' + value.name + '</td><td>' + value.addressLine + '</td><td>' + value.hygieneRating + '</td><td><button class="rating" id ="' + value.name + '">  Get Rating</button>' + '</td></tr>' ;
+					$('#places').append(trHTML);
+					
+					//add all the displayed businesses into the array for future autocomplete, only if they are not already in the array
+					if (!searches.includes(value.name)){
+					searches.push(value.name);
+					}
+				});
+				
+			
+			}, "json" );
+			
+			
+			
+	});
+	});
+	
+	//create and autocomplete function for the search text box
+	$(function(){
+	$( "#search" ).autocomplete({
+		//make the auto complete only show the first 10 results 
+		source: function(request, response) {
+			var results = $.ui.autocomplete.filter(searches, request.term);
+			response(results.slice(0, 10));
+		},	
+	
+	});
+	});
+	
+
+
+	</script>
+	
+	
+	
+	<style>
+	
+	/*remove some un-needed text from the autocomplete plugin*/
+	.ui-helper-hidden-accessible { position: absolute; left:-999em; }
+	
+	/*remove bullet points from autocomplete results list*/
+	ul.ui-autocomplete {
+		list-style: none;
+		padding: 0px;
+		margin: 0px;
+	}
+	
+	
+	#pages{
+		margin: auto;
+		
+		width: 68%;
+
+		
+		border: 3px solid black;
+		padding: 3px;
+}	
+	
+	
+	
+	
+	</style>
+	
+	
+   <title>Food Hygiene	Ratings	 Medway</title>
+   
+   
+
+  </head>
+
+  <body>
+	<h1> Restaurants in Medway and their hygiene/customer ratings </h1>
+	<div id="pages" style="margin-bottom: 10px;">  </div>
+	
+	<div id="test">
+	<table id="places" border='1' style="margin-bottom: 10px;" >
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th> Address </th>
+				<th>Hygiene Rating</th>
+				<th>Customer Rating</th>
+			</tr>
+		</thead>	
+	</table>
+	</div>
+	
+	
+	
+		<b>Search for a restaurant:</b> 
+		<input id= "search" type='text'> 
+		<button id= "submit"> Submit </button>
+
+		
+	
+  </body>
+
+</html>
